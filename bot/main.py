@@ -21,20 +21,36 @@ async def send_welcome(message: types.Message):
 
 @dp.message()
 async def on_message(message: types.Message):
-    # await message.answer(message.text)
+    # forward our question to the backend API for an answer
     async with aiohttp.ClientSession() as session:
-        async with session.get('http://localhost:8000/ask', params={'q': message.text}) as response:
+        async with session.get('http://localhost:8000/ask', params={'q': message.text, 'user_id': message.chat.id, 'message_id': message.message_id}) as response:
             if response.status == 200:
                 data = await response.json()
-                if data.get('answer'):
+                if data.get('isSuccess'):
                     await message.answer(data['answer'])
                 else:
                     await message.answer("I couldn't find an answer to your question. I'll forward it to the operator.")
             else:
                 await message.answer("There was an error processing your request. Please try again later.")
 
+
+async def get_new_answers():
+    while True:
+        await asyncio.sleep(1)
+        async with aiohttp.ClientSession() as session:
+            async with session.get('http://localhost:8000/answers', params={}) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    for answer in data:
+                        # send the answer to the user
+                        await bot.send_message(answer['user_id'], answer['answer'])
+                else:
+                    pass
+
 async def main():
     await dp.start_polling(bot, skip_updates=True)
+    await asyncio.create_task(get_new_answers())
+    
 
 if __name__ == '__main__':
     asyncio.run(main())

@@ -11,7 +11,7 @@ logging.getLogger("openai").disabled = True
 logging.getLogger("httpx").disabled = True
 
 class Answerer:
-    def answer(self, question: str, faq: dict) -> (str, bool):
+    def answer(self, question: str, faq: dict) -> tuple[str, bool]:
         """
         Метод для получения ответа на вопрос от chatgpt. Так же может быть такое, что не получается ответить используя имеющийся FAQ.
         :param question: вопрос
@@ -31,22 +31,19 @@ class Answerer:
         response = client.responses.create(
             model="gpt-4.1-mini",
             instructions='''You are a professional customer support agent. Your task is to respond to the client's message in a clear, polite, and helpful manner. 
-            Use the provided FAQ (Frequently Asked Questions) to guide your answers—if a similar question exists, 
+            Use the provided FAQ (Frequently Asked Questions) to guide your answers: if a similar question exists,
             adapt the approved response while ensuring it fits the new query. Keep responses concise, friendly, and solution-oriented. 
             Format of my requests:
 
             Client Message: [The customer's question or request]
 
             FAQ: [Previous questions and approved answers in dictionary format]
-            You should either
             
-            Your response should:
+            Your response should either:
 
-            Match the tone and style of the FAQ, if exists.
-            
-            If the exact question isn't in the FAQ but is similar, adjust the closest answer logically.
-            
-            If no relevant FAQ exists, respond exactly phrase NO DATA, it's crucial that you must respond exactly that 7 symbols if no relevant FAQ exists.''',
+            1. Match the tone and style of the FAQ, if it exists, or
+            2. If the exact question isn't in the FAQ but a similar one is, select the closest answer logically.
+            3. If no relevant FAQ exists, respond exactly with the phrase "NO DATA", it's crucial that you must respond exactly these 7 symbols if no relevant FAQ exists. Do not halucinate or make up new answers that don't exist.''',
             input=f'''
             Client Message: [{question}]
 

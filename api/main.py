@@ -1,5 +1,10 @@
 from typing import Union
 from fastapi import FastAPI
+from dotenv import load_dotenv
+
+load_dotenv()
+
+from ai.ai import Answerer
 
 import firebase_admin
 from firebase_admin import firestore, credentials
@@ -7,6 +12,8 @@ from firebase_admin import firestore, credentials
 cred = credentials.Certificate('re2ake-2d4df28a7960.json')
 app = firebase_admin.initialize_app(cred)
 db = firestore.client()
+
+ai = Answerer()
 
 
 app = FastAPI()
@@ -17,20 +24,36 @@ def read_root():
 
 # the public API
 @app.get("/ask")
-def ask_question(q: str):
+def ask_question(q: str, user_id: int, message_id: int):
     # query the OpenAI API if it found something in the existing FAQ, or we should forward this to the operator
-    
-    # forwarding means adding a new entry in the 'questions' collection in the DB
+    answer, isSuccess = ai.answer(q, get_faqs())
 
-    return {'answer': 'kys'}
+    if not isSuccess:
+        # if we don't have an answer from the AI, we should forward the question to the operator
+        # add a new entry in the 'questions' collection in the DB
+        db.collection('questions').add({
+            'q': q,
+            'user_id': user_id,
+            'message_id': message_id,
+            'status': 'unanswered'
+        })
+    else:
+        db.collection('questions').add({
+            'q': q,
+            'user_id': user_id,
+            'message_id': message_id,
+            'status': 'auto',
+            'answer': answer
+        })
+
+    # forwarding means adding a new entry in the 'questions' collection in the DB
+    return {'answer': answer, 'isSuccess': isSuccess}
 
 # the private operator/admin API (no auth yet)
 @app.get("/faq")
-def get_faq():
-    faqs = db.collection('faq').get()
-    for faq in faqs:
-        print(faq.id, '=>', faq.to_dict())
-    return {}
+def get_faqs():
+    faqs = [faq.to_dict() for faq in db.collection('faq').get()]
+    return faqs
 
 @app.put("/faq")
 def add_faq(q: str, a: str):
@@ -40,6 +63,11 @@ def add_faq(q: str, a: str):
     })
     return {'faq_id': ref.id}
 
+@app.get("/faq/{faq_id}")
+def get_faq(faq_id: str):
+    faq = db.collection('faq').document(faq_id).get().to_dict()
+    return faq
+
 @app.delete("/faq/{faq_id}")
 def delete_faq(faq_id: str):
     db.collection('faq').document(faq_id).delete()
@@ -47,18 +75,20 @@ def delete_faq(faq_id: str):
 
 @app.get("/questions")
 def get_questions():
-    qs = db.collection('questions').get()
-    questions = []
-    for q in qs:
-        print(q.id, '=>', q.to_dict())
-        questions.append(q.to_dict())
+    questions = [q.to_dict() for q in db.collection('questions').get()]
     return questions
 
 @app.get("/questions/{qid}")
 def get_question(qid: int):
-    return {}
+    q = db.collection('questions').document(qid).get().to_dict()
+    return {'q': q}
 
 @app.delete("/questions/{qid}")
 def delete_question(qid: int):
     db.collection('questions').document(qid).delete()
     return {}
+
+@app.get("/answers")
+def get_answers():
+    answers = [a.to_dict() for a in db.collection('questions').where(status='answered') .get()]
+    return answers
