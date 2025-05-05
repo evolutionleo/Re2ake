@@ -29,7 +29,7 @@ async def on_message(message: types.Message):
                 if data.get('isSuccess'):
                     await message.answer(data['answer'])
                 else:
-                    await message.answer("I couldn't find an answer to your question. I'll forward it to the operator. You'll receive a response as soon as possible.")
+                    await message.answer("I couldn't find an answer to your question, forwarded it to the operator. You'll receive a response as soon as possible!")
             else:
                 await message.answer("There was an error processing your request. Please try again later.")
 
@@ -37,7 +37,6 @@ async def on_message(message: types.Message):
 async def get_new_answers():
     while True:
         await asyncio.sleep(5)
-        print('checking...')
         async with aiohttp.ClientSession() as session:
             async with session.get('http://localhost:8000/answers', params={}) as response:
                 if response.status == 200:
@@ -54,9 +53,9 @@ async def get_new_answers():
                     pass
 
 async def main():
+    asyncio.create_task(get_new_answers())
     await dp.start_polling(bot, skip_updates=True)
     
 
 if __name__ == '__main__':
     asyncio.run(main())
-    asyncio.create_task(get_new_answers())
