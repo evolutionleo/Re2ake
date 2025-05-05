@@ -29,28 +29,34 @@ async def on_message(message: types.Message):
                 if data.get('isSuccess'):
                     await message.answer(data['answer'])
                 else:
-                    await message.answer("I couldn't find an answer to your question. I'll forward it to the operator.")
+                    await message.answer("I couldn't find an answer to your question. I'll forward it to the operator. You'll receive a response as soon as possible.")
             else:
                 await message.answer("There was an error processing your request. Please try again later.")
 
 
 async def get_new_answers():
     while True:
-        await asyncio.sleep(1)
+        await asyncio.sleep(5)
+        print('checking...')
         async with aiohttp.ClientSession() as session:
             async with session.get('http://localhost:8000/answers', params={}) as response:
                 if response.status == 200:
                     data = await response.json()
+
                     for answer in data:
+                        qid = answer['id']
+                        answer = answer['a']
                         # send the answer to the user
-                        await bot.send_message(answer['user_id'], answer['answer'])
+                        
+                        await bot.send_message(answer['user_id'], answer['answer'], reply_to_message_id=answer['message_id'])
+                        await session.delete(f"http://localhost:8000/answers/{qid}")
                 else:
                     pass
 
 async def main():
     await dp.start_polling(bot, skip_updates=True)
-    await asyncio.create_task(get_new_answers())
     
 
 if __name__ == '__main__':
     asyncio.run(main())
+    asyncio.create_task(get_new_answers())
