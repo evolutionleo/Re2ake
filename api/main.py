@@ -28,7 +28,15 @@ def read_root():
 def ask_question(q: str, user_id: int, message_id: int):
     # query the OpenAI API if it found something in the existing FAQ, or we should forward this to the operator
     # answer, isSuccess = ai.answer(q, get_faqs())
+
+    # temporary FAQ placeholder solution
     answer, isSuccess = 'NO DATA', False
+    faqs = get_faqs()
+    for qu in faqs:
+        if qu['q'].lower() == q.lower():
+            answer = qu['a']
+            isSuccess = True
+            break
 
     if not isSuccess:
         # if we don't have an answer from the AI, we should forward the question to the operator
