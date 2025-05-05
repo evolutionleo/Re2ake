@@ -27,11 +27,11 @@ async def on_message(message: types.Message):
             if response.status == 200:
                 data = await response.json()
                 if data.get('isSuccess'):
-                    await message.answer(data['answer'])
+                    await message.answer(data['answer'], reply_to_message_id=message.message_id)
                 else:
-                    await message.answer("I couldn't find an answer to your question, forwarded it to the operator. You'll receive a response as soon as possible!")
+                    await message.answer("I couldn't find an answer to your question. Forwarding it to the operator. You'll receive a response as soon as possible!", reply_to_message_id=message.message_id)
             else:
-                await message.answer("There was an error processing your request. Please try again later.")
+                await message.answer("There was an error processing your request. Please try again later.", reply_to_message_id=message.message_id)
 
 
 async def get_new_answers():

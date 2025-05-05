@@ -62,7 +62,7 @@ def get_answers():
 
 @app.delete("/answers/{qid}")
 def get_answers(qid: str):
-    db.collection('questions').document(qid).set({
+    db.collection('questions').document(qid).update({
         'status': 'sent'
     })
     return {}
